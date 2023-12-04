@@ -23,12 +23,12 @@ VescBLEBridge is a project that lets you add Bluetooth connectivity to your Vesc
 
 Connect the ESP32 C3 to your Vesc controller following the table below.
 
-    | ESP32 C3    | VESC        |
-    | ----------- | ----------- |
-    | 5V          | 5V          |
-    | GND         | GND         |
-    | 20          | RX          |
-    | 21          | TX          |
+| ESP32 C3    || VESC          |
+| ----------- |-| -------------|
+| 5V          |->| 5V          |
+| GND         |->| GND         |
+| 20          |->| RX          |
+| 21          |->| TX          |
 
 If it doesnt work you can try swapping rx and tx pins cause they are swapped on some vesc controllers.
 
