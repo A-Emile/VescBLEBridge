@@ -18,7 +18,7 @@ VescBLEBridge is a project that lets you add Bluetooth connectivity to your Vesc
 **What you need:**
 - [ESP32 C3 Dev Board](https://de.aliexpress.com/item/1005005967641936.html)
 - Some Wires
-- Fitting connector for you Vesc Uart port (Most likely JST-PH2.0)
+- Fitting connector for your Vesc Uart port (Most likely JST-PH2.0)
 - USB C Cable
 
 Connect the ESP32 C3 to your Vesc controller following the table below.
@@ -37,7 +37,7 @@ To flash the firmware to the esp you need the following prerequisites:
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [PlattformIO IDE](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)  extension for VSCode
 
-Once you have VSCode and its PlattformIO extension installed, you need to open this git repo in VSCode. Then connect the esp32 to you computer and hit upload.
+Once you have VSCode and its PlattformIO extension installed, you need to open this git repo in VSCode. Then connect the esp32 to your computer and hit upload.
 
 If you have trouble you can read the official [PlattformIO docs](https://docs.platformio.org/en/latest/integration/ide/vscode.html#ide-vscode)
 
