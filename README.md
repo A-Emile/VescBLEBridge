@@ -17,7 +17,7 @@ VescBLEBridge is a project that lets you add Bluetooth connectivity to your Vesc
 **What you need:**
 - An ESP32 Dev Board (e.g., [ESP32-C3](https://de.aliexpress.com/item/1005005967641936.html) or Seeed XIAO ESP32-C6)
 - Some wires
-- Fitting connector for your VESC UART port (Most likely JST-PH2.0)
+- Fitting connector for your VESC UART port
 - USB-C Cable
 
 Connect the ESP32 to your VESC controller following the table below based on which board you are using. *(Remember: TX goes to RX, and RX goes to TX!)*
@@ -29,7 +29,7 @@ Connect the ESP32 to your VESC controller following the table below based on whi
 | **RX** | TX (Pin 21) | TX (Pin D9) |
 | **TX** | RX (Pin 20) | RX (Pin D10) |
 
-*Note: If it doesn't work, try swapping the RX and TX pins, as the labeling convention can vary on some VESC controllers.*
+*Note: If it doesn't work, try swapping the RX and TX pins*
 
 ### Flashing Firmware
 To flash the firmware to the ESP, you need the following prerequisites:
@@ -68,14 +68,4 @@ and set your own passkey:
 #define BLE_SECURITY_PASSKEY 123456
 ```
 
-Re-flash the firmware. The first time a device connects it will be prompted for the passkey, and the bond is remembered afterwards. *(The connecting app must support BLE passkey entry.)*
-
-## Contributing
-
-We welcome contributions from the community! If you have ideas for improvements, feature requests, or bug reports, please open an issue or submit a pull request.
-
-## Support
-
-For any questions or issues, feel free to open an issue.
-
-Happy riding!
+Re-flash the firmware. The first time a device connects it will be prompted for the passkey, and the bond is remembered afterwards.
