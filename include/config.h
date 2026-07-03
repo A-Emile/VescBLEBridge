@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 
 // Name shown when scanning for Bluetooth devices (and in the VESC Tool app).
-#define BLE_DEVICE_NAME "Iphone 10"
+#define BLE_DEVICE_NAME "VescBLEBridge"
 
 // Transmit power. One of ESP_PWR_LVL_N24 ... ESP_PWR_LVL_P9 (P9 = maximum).
 #define BLE_TX_POWER ESP_PWR_LVL_P9
