@@ -1,7 +1,11 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
-int MTU_SIZE = 128;
+// All user-configurable values (device name, pins, UUIDs, BLE security, ...)
+// live in include/config.h.
+#include "config.h"
+
+int MTU_SIZE = DEFAULT_MTU_SIZE;
 int PACKET_SIZE = MTU_SIZE - 3;
 NimBLEServer *pServer = nullptr;
 NimBLEService *pServiceVesc = nullptr;
@@ -13,25 +17,7 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint8_t txValue = 0;
 
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
-
-#define VESC_SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
-#define VESC_CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-#define VESC_CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
-
-#define LOG_TAG_BLESERVER "BleServer" 
-
-
-// Detect if the board is the Seeed XIAO C6
-#if defined(ARDUINO_SEEED_XIAO_ESP32C6)
-  #define VESC_RX_PIN D10
-  #define VESC_TX_PIN D9
-// Otherwise, default to the original C3 pins
-#else
-  #define VESC_RX_PIN 20
-  #define VESC_TX_PIN 21
-#endif
+#define LOG_TAG_BLESERVER "BleServer"
 
 /**  None of these are required as they will be handled by the library with defaults. **
  **                       Remove as you see fit for your needs                        */
@@ -90,19 +76,35 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
 void setup()
 {
   Serial.begin(115200);
-  Serial1.begin(115200, SERIAL_8N1, VESC_RX_PIN, VESC_TX_PIN);
+  Serial1.begin(VESC_UART_BAUD, SERIAL_8N1, VESC_RX_PIN, VESC_TX_PIN);
 
   // Create the BLE Device
-  NimBLEDevice::init("VescBLEBridge");
-  NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+  NimBLEDevice::init(BLE_DEVICE_NAME);
+  NimBLEDevice::setPower(BLE_TX_POWER);
 
   // Create the BLE Server
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
-  //auto pSecurity = new NimBLESecurity();
-  //pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
 
-  NimBLEDevice::setSecurityAuth(true, false, false); // Enable bonding
+#ifdef ENABLE_BLE_SECURITY
+  // Require the client to enter BLE_SECURITY_PASSKEY when pairing.
+  // bonding + MITM protection + LE Secure Connections.
+  NimBLEDevice::setSecurityAuth(true, true, true);
+  NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+  NimBLEDevice::setSecurityPasskey(BLE_SECURITY_PASSKEY);
+  ESP_LOGI(LOG_TAG_BLESERVER, "BLE security enabled - passkey required to connect");
+#else
+  NimBLEDevice::setSecurityAuth(true, false, false); // Enable bonding only
+#endif
+
+  // Characteristic property flags. When security is enabled, reads/writes
+  // additionally require an authenticated (passkey-paired) connection.
+  uint32_t txProperties = NIMBLE_PROPERTY::NOTIFY | NIMBLE_PROPERTY::READ;
+  uint32_t rxProperties = NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR;
+#ifdef ENABLE_BLE_SECURITY
+  txProperties |= NIMBLE_PROPERTY::READ_ENC | NIMBLE_PROPERTY::READ_AUTHEN;
+  rxProperties |= NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::WRITE_AUTHEN;
+#endif
 
   // Create the BLE Service
   BLEService *pService = pServer->createService(VESC_SERVICE_UUID);
@@ -110,14 +112,12 @@ void setup()
   // Create a BLE TX Characteristic
   pCharacteristicVescTx = pService->createCharacteristic(
       VESC_CHARACTERISTIC_UUID_TX,
-      NIMBLE_PROPERTY::NOTIFY |
-          NIMBLE_PROPERTY::READ);
+      txProperties);
 
   // Create a BLE RX Characteristic
   pCharacteristicVescRx = pService->createCharacteristic(
       VESC_CHARACTERISTIC_UUID_RX,
-      NIMBLE_PROPERTY::WRITE |
-          NIMBLE_PROPERTY::WRITE_NR);
+      rxProperties);
 
   pCharacteristicVescRx->setCallbacks(new MyCallbacks());
 

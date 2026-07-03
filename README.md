@@ -22,7 +22,7 @@ VescBLEBridge is a project that lets you add Bluetooth connectivity to your Vesc
 
 Connect the ESP32 to your VESC controller following the table below based on which board you are using. *(Remember: TX goes to RX, and RX goes to TX!)*
 
-| VESC | ESP32-C3 (Generic) | ESP32-C6 (Seeed XIAO) |
+| VESC | ESP32-C3 | ESP32-C6 |
 | :--- | :--- | :--- |
 | **5V** | 5V | 5V |
 | **GND** | GND | GND |
@@ -43,6 +43,32 @@ Once you have VSCode and its PlatformIO extension installed:
 4. Hit **Upload**.
 
 If you have trouble, you can read the official [PlatformIO docs](https://docs.platformio.org/en/latest/integration/ide/vscode.html#ide-vscode).
+
+### Configuration
+
+All user-configurable values live in [`include/config.h`](include/config.h). Edit them and re-flash — you shouldn't need to touch `src/main.cpp`. Options include:
+
+- **`BLE_DEVICE_NAME`** – the name shown when scanning for the bridge.
+- **`BLE_TX_POWER`** – Bluetooth transmit power.
+- **`VESC_UART_BAUD`** – UART baud rate to the VESC.
+- **`VESC_RX_PIN` / `VESC_TX_PIN`** – UART pins (board-specific defaults are provided).
+- **`VESC_SERVICE_UUID` / ...** – BLE UUIDs (leave as-is for VESC Tool compatibility).
+
+#### Optional: require a password to connect
+
+By default any device in range can connect to the bridge. To require pairing with a fixed 6-digit passkey, uncomment this line in [`include/config.h`](include/config.h):
+
+```cpp
+#define ENABLE_BLE_SECURITY
+```
+
+and set your own passkey:
+
+```cpp
+#define BLE_SECURITY_PASSKEY 123456
+```
+
+Re-flash the firmware. The first time a device connects it will be prompted for the passkey, and the bond is remembered afterwards. *(The connecting app must support BLE passkey entry.)*
 
 ## Contributing
 
