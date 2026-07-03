@@ -20,28 +20,37 @@ uint8_t txValue = 0;
 #define VESC_CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define VESC_CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
+#define LOG_TAG_BLESERVER "BleServer" 
+
+
+// Detect if the board is the Seeed XIAO C6
+#if defined(ARDUINO_SEEED_XIAO_ESP32C6)
+  #define VESC_RX_PIN D10
+  #define VESC_TX_PIN D9
+// Otherwise, default to the original C3 pins
+#else
+  #define VESC_RX_PIN 20
+  #define VESC_TX_PIN 21
+#endif
+
 /**  None of these are required as they will be handled by the library with defaults. **
  **                       Remove as you see fit for your needs                        */
-class MyServerCallbacks : public BLEServerCallbacks
-{
-  void onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
-  {
-    ESP_LOGI(LOG_TAG_BLESERVER, "Client connected: %s", NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+class MyServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer *pServer, NimBLEConnInfo& connInfo) override {
+    ESP_LOGI(LOG_TAG_BLESERVER, "Client connected: %s", connInfo.getAddress().toString().c_str());
     ESP_LOGI(LOG_TAG_BLESERVER, "Multi-connect support: start advertising");
     deviceConnected = true;
     NimBLEDevice::startAdvertising();
   }
 
-  void onDisconnect(NimBLEServer *pServer)
-  {
+  void onDisconnect(NimBLEServer *pServer, NimBLEConnInfo& connInfo, int reason) override {
     ESP_LOGI(LOG_TAG_BLESERVER, "Client disconnected - start advertising");
     deviceConnected = false;
     NimBLEDevice::startAdvertising();
   }
 
-  void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
-  {
-    ESP_LOGI(LOG_TAG_BLESERVER, "MTU changed - new size %d, peer %s", MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  void onMTUChange(uint16_t MTU, NimBLEConnInfo& connInfo) override {
+    ESP_LOGI(LOG_TAG_BLESERVER, "MTU changed - new size %d, peer %s", MTU, connInfo.getAddress().toString().c_str());
     MTU_SIZE = MTU;
     PACKET_SIZE = MTU_SIZE - 3;
   }
@@ -63,19 +72,14 @@ void dumpBuffer(std::string header, std::string buffer)
   ESP_LOGD(LOG_TAG_BLESERVER, "%s", tmpbuf);
 }
 
-class MyCallbacks : public BLECharacteristicCallbacks
-{
-  void onWrite(BLECharacteristic *pCharacteristic)
-  {
+class MyCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo) override {
     ESP_LOGD(LOG_TAG_BLESERVER, "onWrite to characteristics: %s", pCharacteristic->getUUID().toString().c_str());
     std::string rxValue = pCharacteristic->getValue();
-    if (rxValue.length() > 0)
-    {
-      if (pCharacteristic->getUUID().equals(pCharacteristicVescRx->getUUID()))
-      {
+    if (rxValue.length() > 0) {
+      if (pCharacteristic->getUUID().equals(pCharacteristicVescRx->getUUID())) {
         dumpBuffer("BLE/UART => VESC: ", rxValue);
-        for (int i = 0; i < rxValue.length(); i++)
-        {
+        for (int i = 0; i < rxValue.length(); i++) {
           Serial1.write(rxValue[i]);
         }
       }
@@ -86,7 +90,7 @@ class MyCallbacks : public BLECharacteristicCallbacks
 void setup()
 {
   Serial.begin(115200);
-  Serial1.begin(115200, SERIAL_8N1, 20, 21); // RX=20, TX=21
+  Serial1.begin(115200, SERIAL_8N1, VESC_RX_PIN, VESC_TX_PIN);
 
   // Create the BLE Device
   NimBLEDevice::init("VescBLEBridge");
@@ -95,8 +99,10 @@ void setup()
   // Create the BLE Server
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
-  auto pSecurity = new NimBLESecurity();
-  pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+  //auto pSecurity = new NimBLESecurity();
+  //pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+
+  NimBLEDevice::setSecurityAuth(true, false, false); // Enable bonding
 
   // Create the BLE Service
   BLEService *pService = pServer->createService(VESC_SERVICE_UUID);
@@ -115,15 +121,10 @@ void setup()
 
   pCharacteristicVescRx->setCallbacks(new MyCallbacks());
 
-  // Start the VESC service
-  pService->start();
 
   // Start advertising
   NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(VESC_SERVICE_UUID);
-  //    pAdvertising->setAppearance(0x00);
-  //    pAdvertising->setScanResponse(true);
-  //    pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
 
   pAdvertising->start();
   ESP_LOGI(LOG_TAG_BLESERVER, "waiting a client connection to notify...");
